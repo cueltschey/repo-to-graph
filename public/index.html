@@ -148,7 +148,7 @@
 
 
         // Load the JSON data
-        fetch('miserables.json')
+        fetch('graph.json')
             .then(response => response.json())
             .then(data => {
                 // Create the ForceGraph chart
@@ -157,8 +157,8 @@
                     nodeGroup: d => d.group,
                     nodeTitle: d => `${d.id}\n${d.group}`,
                     linkStrokeWidth: l => Math.sqrt(l.value),
-                    width: 2000,
-                    height: 1250,
+                    width: 3000,
+                    height: 2250,
                     invalidation: new Promise(resolve => {
                         // Resolve the promise to stop the simulation
                         setTimeout(resolve, 10000); // Stops after 10 seconds
