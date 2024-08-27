@@ -11,7 +11,7 @@ def find_files(directory):
     path = pathlib.Path(directory)
     return set([file for file in path.glob("**/*.cc")] + [file for file in path.glob("**/*.h")])
 
-def parse_file(file_path, dir):
+def parse_file_imports(file_path, dir):
     """Parse a file to find its import relationships and return a list of pathlib.Path objects."""
     imports = set()
     file_dir = file_path.parent
@@ -33,7 +33,45 @@ def parse_file(file_path, dir):
     
     return list(imports)
 
-def generate_graph(files, dirstring):
+def parse_file_declarations(file_path):
+    functions = set()
+    
+    with open(file_path, 'r') as f:
+        for line in f:
+            if "if" in line or "for" in line or "while" in line:
+                continue
+            if '(' in line and '::' in line:
+                parts = line.split('(')
+                if len(parts) > 1:
+                    functions.add(parts[0].strip())
+    
+    return list(functions)
+
+def parse_file_calls(file_path):
+    functions = []
+    func_stack = []
+    
+    with open(file_path, 'r') as f:
+        for line in f:
+            if "if" in line or "for" in line or "while" in line:
+                continue
+            if '(' in line and '::' in line:
+                func_stack.append(line.split("(")[0].strip())
+            if '}' in line:
+                func_stack = []
+
+            if '(' in line and '::' not in line:
+                parts = line.split('(')
+                if len(parts) > 0 and len(func_stack) > 0:
+                    functions.append({ "to": parts[0].strip(), "from": func_stack[0].strip()})
+    
+    return list(functions)
+
+
+
+
+
+def generate_file_graph(files, dirstring):
     """Generate nodes and links from file import relationships."""
     dir = pathlib.Path(dirstring)
     nodes = []
@@ -53,7 +91,7 @@ def generate_graph(files, dirstring):
         current_uuid = str(uuid.uuid4())
         nodes.append({'id': current_uuid, "user": str(file), 'description': file_type})
     for node in nodes:
-        imports = parse_file(pathlib.Path(node["user"]), dir)
+        imports = parse_file_imports(pathlib.Path(node["user"]), dir)
         for imp in imports:
             matching_nodes = [item for item in nodes if str(imp) in item["user"]]
             if len(matching_nodes) > 0:
@@ -61,19 +99,48 @@ def generate_graph(files, dirstring):
     
     return nodes, links
 
+def generate_function_graph(files):
+    """Generate nodes and links from file import relationships."""
+    nodes = []
+    links = []
+    name_to_id = {}
+    for file in files:
+        functions = parse_file_declarations(file)
+        for func in functions:
+            current_uuid = str(uuid.uuid4())
+            nodes.append({'id': current_uuid, "user": func.split(" ")[-1].split("::")[-1], 'description': func.split(" ")[-1].split("::")[0] })
+            name_to_id[func.split(" ")[-1].split("::")[-1]] = current_uuid
+
+    for file in files:
+        functions = parse_file_calls(file)
+        for func in functions:
+            if func["to"] in name_to_id.keys() and func["from"] in name_to_id.keys():
+                print(func["from"], "->", func["to"])
+                links.append({'source': name_to_id[func["from"]], 'target': name_to_id[func["to"]],'value': 2})
+    
+    return nodes, links
+
+
+
 def parse():
     parser = argparse.ArgumentParser(description='Generate JSON for file import relationships.')
     parser.add_argument('directory', type=str, help='Directory to scan for .cc and .h files')
     parser.add_argument('--output', type=str, help='output file name')
+    parser.add_argument('--type', type=str, help='output file name')
     return parser.parse_args()
 
 
 def main():
     args = parse()
 
-    files = find_files(args.directory)
-    nodes, links = generate_graph(files, ".")
+    nodes = []
+    links = []
 
+    files = find_files(args.directory)
+    if args.type == "files":
+        nodes, links = generate_file_graph(files, ".")
+    elif args.type == "functions":
+        nodes, links = generate_function_graph(files)
     graph = {'nodes': nodes, 'links': links}
 
     output_file = pathlib.Path(args.output)

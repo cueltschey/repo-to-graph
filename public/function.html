@@ -59,25 +59,6 @@
 
     let focusedNode = null;
 
-    function nodePaint(node, ctx, index) {
-      ctx.fillStyle = colorList[node.description];
-
-      // Draw the node based on its type
-      [
-        () => { ctx.fillRect(node.x - 6, node.y - 4, 12, 8); }, // rectangle
-        () => { ctx.beginPath(); ctx.moveTo(node.x, node.y - 5); ctx.lineTo(node.x - 5, node.y + 5); ctx.lineTo(node.x + 5, node.y + 5); ctx.fill(); }, // triangle
-        () => { ctx.beginPath(); ctx.arc(node.x, node.y, 10, 0, 2 * Math.PI, false); ctx.fill(); }, // circle
-        () => { ctx.font = '10px Sans-Serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('Text', node.x, node.y); } // text
-      ][index]();
-
-      // Draw an outline if this node is focused
-      if (node === focusedNode) {
-        ctx.strokeStyle = 'orange'; // Outline color
-        ctx.lineWidth = 2; // Outline width
-        ctx.stroke(); // Apply the stroke
-      }
-    }
-
     function focusOnNode(node, Graph) {
       Graph.centerAt(node.x, node.y, 1000);
       Graph.zoom(2, 1000);
@@ -85,22 +66,14 @@
       document.getElementById('title').textContent = node.user
     }
 
-    fetch('./graph.json').then(res => res.json()).then(data => {
+    fetch('./functions.json').then(res => res.json()).then(data => {
       const elem = document.getElementById('graph');
 
       const Graph = ForceGraph()(elem)
-        .nodeCanvasObject((node, ctx) => nodePaint(node, ctx, node.user.split(".")[3] === "h"? 1 : 2))
         .backgroundColor('#101020')
         .nodeRelSize(12)
         .nodeAutoColorBy('description')
         .nodeLabel(node => `${node.user} : ${node.description}`)
-        .linkColor(link => {
-          // Color links based on whether they are connected to the focused node
-          if (focusedNode && (link.source === focusedNode || link.target === focusedNode)) {
-            return 'orange'; // Color for links connected to the focused node
-          }
-          return 'rgba(255,255,255,0.2)'; // Default link color
-        })
         .linkDirectionalArrowLength(6)
         .onNodeClick(node =>{
           focusOnNode(node, Graph)
