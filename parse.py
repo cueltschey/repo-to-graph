@@ -107,7 +107,6 @@ def generate_function_graph(files):
     for file in files:
         functions = parse_file_declarations(file)
         for func in functions:
-            current_uuid = str(uuid.uuid4())
             func_name = func.split(" ")[-1].split("::")[-1].split(".")[-1].split(">")[-1]
             func_desc = func.split(" ")[-1].split("::")[0]
             if func_desc == func_name or "~" in func_name or "." in func_desc or ">" in func_desc:
@@ -115,8 +114,9 @@ def generate_function_graph(files):
             if func_name == "" or func_desc == "":
                 continue
             if  func_name not in name_to_id.keys():
+                current_uuid = str(uuid.uuid4())
                 nodes.append({'id': current_uuid, "user": func_name, 'description': func_desc})
-            name_to_id[func.split(" ")[-1].split("::")[-1]] = current_uuid
+                name_to_id[func.split(" ")[-1].split("::")[-1]] = current_uuid
 
     for file in files:
         functions = parse_file_calls(file)
