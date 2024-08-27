@@ -4,6 +4,7 @@ import pathlib
 from collections import defaultdict
 import sys
 import os
+import uuid
 
 def find_files(directory):
     """Find all .cc and .h files in the directory."""
@@ -38,22 +39,25 @@ def generate_graph(files, dirstring):
     nodes = []
     links = []
     for file in files:
-        file_type = 0
+        file_type = ""
         if "main" in str(file):
-            file_type = 1
+            file_type = "Main"
         elif "srsenb" in str(file):
-            file_type = 2
+            file_type = "srsRAN eNB"
         elif "srsepc" in str(file):
-            file_type = 3
+            file_type = "srsRAN EPC"
         elif "srsue" in str(file):
-            file_type = 4
+            file_type = "srsRAN UE"
         else:
-            file_type = 5
-        nodes.append({'id': str(file), 'group': file_type})
-        imports = parse_file(file, dir)
+            file_type = "Common"
+        current_uuid = str(uuid.uuid4())
+        nodes.append({'id': current_uuid, "user": str(file), 'description': file_type})
+    for node in nodes:
+        imports = parse_file(pathlib.Path(node["user"]), dir)
         for imp in imports:
-            if imp in files:
-                links.append({'source': str(file), 'target': str(imp), 'value': 2})
+            matching_nodes = [item for item in nodes if str(imp) in item["user"]]
+            if len(matching_nodes) > 0:
+                links.append({'source': node["id"], 'target': matching_nodes[0]["id"], 'value': 2})
     
     return nodes, links
 
