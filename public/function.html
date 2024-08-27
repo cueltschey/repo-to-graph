@@ -75,6 +75,7 @@
         .nodeAutoColorBy('description')
         .nodeLabel(node => `${node.user} : ${node.description}`)
         .linkDirectionalArrowLength(6)
+        .linkColor(() => "rgb(255,255,255,0.2)")
         .onNodeClick(node =>{
           focusOnNode(node, Graph)
         })

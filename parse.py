@@ -63,9 +63,9 @@ def parse_file_calls(file_path):
             if '(' in line and '::' not in line:
                 parts = line.split('(')
                 if len(parts) > 0 and len(func_stack) > 0:
-                    functions.append({ "to": parts[0].strip(), "from": func_stack[0].strip()})
+                    functions.append({ "to": parts[0].strip().split(" ")[-1].split("::")[-1].split(".")[-1].split(">")[-1], "from": func_stack[0].strip().split(" ")[-1].split("::")[-1].split(".")[-1].split(">")[-1]})
     
-    return list(functions)
+    return functions
 
 
 
@@ -108,15 +108,23 @@ def generate_function_graph(files):
         functions = parse_file_declarations(file)
         for func in functions:
             current_uuid = str(uuid.uuid4())
-            nodes.append({'id': current_uuid, "user": func.split(" ")[-1].split("::")[-1], 'description': func.split(" ")[-1].split("::")[0] })
+            func_name = func.split(" ")[-1].split("::")[-1].split(".")[-1].split(">")[-1]
+            func_desc = func.split(" ")[-1].split("::")[0]
+            if func_desc == func_name or "~" in func_name or "." in func_desc or ">" in func_desc:
+                continue
+            if func_name == "" or func_desc == "":
+                continue
+            if  func_name not in name_to_id.keys():
+                nodes.append({'id': current_uuid, "user": func_name, 'description': func_desc})
             name_to_id[func.split(" ")[-1].split("::")[-1]] = current_uuid
 
     for file in files:
         functions = parse_file_calls(file)
         for func in functions:
             if func["to"] in name_to_id.keys() and func["from"] in name_to_id.keys():
-                print(func["from"], "->", func["to"])
                 links.append({'source': name_to_id[func["from"]], 'target': name_to_id[func["to"]],'value': 2})
+
+
     
     return nodes, links
 
@@ -144,6 +152,8 @@ def main():
     graph = {'nodes': nodes, 'links': links}
 
     output_file = pathlib.Path(args.output)
+    print(f"Found {len(nodes)} nodes")
+    print(f"Generated {len(links)} links")
     with open(output_file, 'w') as f:
         json.dump(graph, f, indent=4)
 
