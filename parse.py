@@ -64,6 +64,7 @@ def generate_graph(files, dirstring):
 def parse():
     parser = argparse.ArgumentParser(description='Generate JSON for file import relationships.')
     parser.add_argument('directory', type=str, help='Directory to scan for .cc and .h files')
+    parser.add_argument('--output', type=str, help='output file name')
     return parser.parse_args()
 
 
@@ -75,7 +76,7 @@ def main():
 
     graph = {'nodes': nodes, 'links': links}
 
-    output_file = pathlib.Path(args.directory) / 'graph.json'
+    output_file = pathlib.Path(args.output)
     with open(output_file, 'w') as f:
         json.dump(graph, f, indent=4)
 
