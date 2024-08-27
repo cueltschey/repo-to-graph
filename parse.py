@@ -71,7 +71,7 @@ def main():
     args = parse()
 
     files = find_files(args.directory)
-    nodes, links = generate_graph(files, args.directory)
+    nodes, links = generate_graph(files, ".")
 
     graph = {'nodes': nodes, 'links': links}
 
