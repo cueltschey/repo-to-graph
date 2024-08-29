@@ -7,7 +7,8 @@
     <script src="//unpkg.com/force-graph"></script>
     <style type="text/css">
     body{
-    margin: 0px;
+      margin: 0px;
+      background-color: #101020
     }
     .force-graph-container canvas {
       display: block;
@@ -49,6 +50,10 @@
         <canvas width="100vw" height="100vh" style="background: rgb(16, 16, 32);"></canvas>
       </div>
     </div>
+    <div style="position: absolute; top: 10px; left: 400px">
+      <input type="text" id="root" placeholder="Files Root">
+      <input type="text" id="rootFunctions" placeholder="functions Root">
+    </div>
     <script>
     colorList = {
       "Common": "#34ff34",
@@ -59,8 +64,26 @@
 
     let focusedNode = null;
 
+    document.addEventListener('keydown', function(event) {
+        if (event.ctrlKey && event.key === 'f') {
+          event.preventDefault(); // Prevent default behavior (e.g., opening a search dialog)
+          searchBar.focus(); // Focus the search bar
+          searchBar.value = ""
+        }
+    });
+
+    function randomColorHex() {
+      const randomHex = '#' + Math.floor(Math.random() * 16777215).toString(16).padStart(6, '0');
+      return randomHex;
+    }
+
+
     function nodePaint(node, ctx, index) {
-      ctx.fillStyle = colorList[node.description];
+      if(!colorList[node.description]){
+        ctx.fillStyle = randomColorHex()
+      } else {
+        ctx.fillStyle = colorList[node.description]
+      }
 
       // Draw the node based on its type
       [
@@ -85,49 +108,100 @@
       document.getElementById('title').textContent = node.user
     }
 
-    fetch('./graph.json').then(res => res.json()).then(data => {
-      const elem = document.getElementById('graph');
+    const initGraphFiles = (endpoint) => {
+      fetch(endpoint).then(res => res.json()).then(data => {
+        const elem = document.getElementById('graph');
 
-      const Graph = ForceGraph()(elem)
-        .nodeCanvasObject((node, ctx) => nodePaint(node, ctx, node.user.split(".")[3] === "h"? 1 : 2))
-        .backgroundColor('#101020')
-        .nodeRelSize(12)
-        .nodeAutoColorBy('description')
-        .nodeLabel(node => `${node.user} : ${node.description}`)
-        .linkColor(link => {
-          // Color links based on whether they are connected to the focused node
-          if (focusedNode && (link.source === focusedNode || link.target === focusedNode)) {
-            return 'orange'; // Color for links connected to the focused node
+        const Graph = ForceGraph()(elem)
+          .nodeCanvasObject((node, ctx) => nodePaint(node, ctx, node.user.split(".")[3] === "h"? 1 : 2))
+          .backgroundColor('#101020')
+          .nodeRelSize(12)
+          .nodeAutoColorBy('description')
+          .nodeLabel(node => `${node.user} : ${node.description}`)
+          .linkColor(link => {
+            // Color links based on whether they are connected to the focused node
+            if (focusedNode && (link.source === focusedNode || link.target === focusedNode)) {
+              return 'orange'; // Color for links connected to the focused node
+            }
+            return 'rgba(255,255,255,0.2)'; // Default link color
+          })
+          .linkDirectionalArrowLength(6)
+          .onNodeClick(node =>{
+            focusOnNode(node, Graph)
+          })
+          .graphData(data);
+        Graph.d3Force('charge').strength(-500);
+
+        document.getElementById('searchBar').addEventListener('input', function() {
+          const searchTerm = this.value.toLowerCase();
+
+          // Find the node that matches the search term
+          const matchedNode = data.nodes.find(node => node.user.toLowerCase().includes(searchTerm));
+
+          if (matchedNode) {
+            focusOnNode(matchedNode, Graph);
           }
-          return 'rgba(255,255,255,0.2)'; // Default link color
-        })
-        .linkDirectionalArrowLength(6)
-        .onNodeClick(node =>{
-          focusOnNode(node, Graph)
-        })
-        .graphData(data);
-      Graph.d3Force('charge').strength(-500);
-
-      document.getElementById('searchBar').addEventListener('input', function() {
-        const searchTerm = this.value.toLowerCase();
-
-        // Find the node that matches the search term
-        const matchedNode = data.nodes.find(node => node.user.toLowerCase().includes(searchTerm));
-
-        if (matchedNode) {
-          focusOnNode(matchedNode, Graph);
-        }
+        });
       });
+    }
 
-      document.addEventListener('keydown', function(event) {
-        if (event.ctrlKey && event.key === 'f') {
-          event.preventDefault(); // Prevent default behavior (e.g., opening a search dialog)
-          searchBar.focus(); // Focus the search bar
-          searchBar.value = ""
-        }
+    const initGraphFunctions = (endpoint) => {
+      fetch(endpoint).then(res => res.json()).then(data => {
+        const elem = document.getElementById('graph');
+
+        const Graph = ForceGraph()(elem)
+          .nodeCanvasObject((node, ctx) => nodePaint(node, ctx, node.user.split(".")[3] === "h"? 1 : 2))
+          .backgroundColor('#101020')
+          .nodeRelSize(12)
+          .nodeAutoColorBy('description')
+          .nodeLabel(node => `${node.user} : ${node.description}`)
+          .linkColor(link => {
+            // Color links based on whether they are connected to the focused node
+            if (focusedNode && (link.source === focusedNode || link.target === focusedNode)) {
+              return 'orange'; // Color for links connected to the focused node
+            }
+            return 'rgba(255,255,255,0.2)'; // Default link color
+          })
+          .linkDirectionalArrowLength(6)
+          .onNodeClick(node =>{
+            focusOnNode(node, Graph)
+          })
+          .graphData(data);
+        Graph.d3Force('charge').strength(-500);
+
+        document.getElementById('searchBar').addEventListener('input', function() {
+          const searchTerm = this.value.toLowerCase();
+
+          // Find the node that matches the search term
+          const matchedNode = data.nodes.find(node => node.user.toLowerCase().includes(searchTerm));
+
+          if (matchedNode) {
+            focusOnNode(matchedNode, Graph);
+          }
+        });
       });
+    }
+
+    const changeRootFiles = document.getElementById("root")
+
+    changeRootFiles.addEventListener('keyup', (event) => {
+      if (event.key === 'Enter') {
+        initGraphFiles(`./api/files?directory=${changeRootFiles.value}`)
+      }
     });
-    
+
+
+    const changeRootFunctions = document.getElementById("rootFunctions")
+
+    changeRootFunctions.addEventListener('keyup', (event) => {
+      if (event.key === 'Enter') {
+        initGraphFunctions(`./api/functions?directory=${changeRootFunctions.value}`)
+      }
+    });
+
+
+    window.onload = initGraphFiles("./init.json");
+
     </script>
   </body>
 </html>

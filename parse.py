@@ -6,9 +6,8 @@ import sys
 import os
 import uuid
 
-def find_files(directory):
+def find_files(path):
     """Find all .cc and .h files in the directory."""
-    path = pathlib.Path(directory)
     return set([file for file in path.glob("**/*.cc")] + [file for file in path.glob("**/*.h")])
 
 def parse_file_imports(file_path, dir):
@@ -132,8 +131,8 @@ def generate_function_graph(files):
 
 def parse():
     parser = argparse.ArgumentParser(description='Generate JSON for file import relationships.')
-    parser.add_argument('directory', type=str, help='Directory to scan for .cc and .h files')
-    parser.add_argument('--output', type=str, help='output file name')
+    parser.add_argument('directory', type=pathlib.Path, help='Directory to scan for .cc and .h files', default=None)
+    parser.add_argument('--output', type=pathlib.Path, help='output file name')
     parser.add_argument('--type', type=str, help='output file name')
     return parser.parse_args()
 
@@ -151,13 +150,15 @@ def main():
         nodes, links = generate_function_graph(files)
     graph = {'nodes': nodes, 'links': links}
 
-    output_file = pathlib.Path(args.output)
-    print(f"Found {len(nodes)} nodes")
-    print(f"Generated {len(links)} links")
-    with open(output_file, 'w') as f:
-        json.dump(graph, f, indent=4)
+    if args.output:
+        output_file = args.output
+        with open(output_file, 'w') as f:
+            json.dump(graph, f, indent=4)
 
-    print(f'Graph data has been written to {output_file}')
+        print(f"Graph Written to {args.output}")
+    else:
+        print(graph)
+
     return 0
 
 if __name__ == "__main__":
