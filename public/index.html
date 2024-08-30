@@ -12,7 +12,7 @@
     }
     .force-graph-container canvas {
       display: block;
-      user-select: none;
+      name-select: none;
       outline: none;
       -webkit-tap-highlight-color: transparent;
     }
@@ -79,10 +79,10 @@
 
 
     function nodePaint(node, ctx, index) {
-      if(!colorList[node.description]){
+      if(!colorList[node.type]){
         ctx.fillStyle = randomColorHex()
       } else {
-        ctx.fillStyle = colorList[node.description]
+        ctx.fillStyle = colorList[node.type]
       }
 
       // Draw the node based on its type
@@ -105,7 +105,7 @@
       Graph.centerAt(node.x, node.y, 1000);
       Graph.zoom(2, 1000);
       focusedNode = node
-      document.getElementById('title').textContent = node.user
+      document.getElementById('title').textContent = node.name
     }
 
     const initGraphFiles = (endpoint) => {
@@ -113,11 +113,11 @@
         const elem = document.getElementById('graph');
 
         const Graph = ForceGraph()(elem)
-          .nodeCanvasObject((node, ctx) => nodePaint(node, ctx, node.user.split(".")[3] === "h"? 1 : 2))
+          .nodeCanvasObject((node, ctx) => nodePaint(node, ctx, node.name.split(".")[3] === "h"? 1 : 2))
           .backgroundColor('#101020')
           .nodeRelSize(12)
-          .nodeAutoColorBy('description')
-          .nodeLabel(node => `${node.user} : ${node.description}`)
+          .nodeAutoColorBy('type')
+          .nodeLabel(node => `${node.name} : ${node.type}`)
           .linkColor(link => {
             // Color links based on whether they are connected to the focused node
             if (focusedNode && (link.source === focusedNode || link.target === focusedNode)) {
@@ -136,7 +136,7 @@
           const searchTerm = this.value.toLowerCase();
 
           // Find the node that matches the search term
-          const matchedNode = data.nodes.find(node => node.user.toLowerCase().includes(searchTerm));
+          const matchedNode = data.nodes.find(node => node.name.toLowerCase().includes(searchTerm));
 
           if (matchedNode) {
             focusOnNode(matchedNode, Graph);
@@ -150,11 +150,11 @@
         const elem = document.getElementById('graph');
 
         const Graph = ForceGraph()(elem)
-          .nodeCanvasObject((node, ctx) => nodePaint(node, ctx, node.user.split(".")[3] === "h"? 1 : 2))
+          .nodeCanvasObject((node, ctx) => nodePaint(node, ctx, node.name.split(".")[3] === "h"? 1 : 2))
           .backgroundColor('#101020')
           .nodeRelSize(12)
-          .nodeAutoColorBy('description')
-          .nodeLabel(node => `${node.user} : ${node.description}`)
+          .nodeAutoColorBy('type')
+          .nodeLabel(node => `${node.name} : ${node.type}`)
           .linkColor(link => {
             // Color links based on whether they are connected to the focused node
             if (focusedNode && (link.source === focusedNode || link.target === focusedNode)) {
@@ -173,7 +173,7 @@
           const searchTerm = this.value.toLowerCase();
 
           // Find the node that matches the search term
-          const matchedNode = data.nodes.find(node => node.user.toLowerCase().includes(searchTerm));
+          const matchedNode = data.nodes.find(node => node.name.toLowerCase().includes(searchTerm));
 
           if (matchedNode) {
             focusOnNode(matchedNode, Graph);

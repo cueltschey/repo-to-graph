@@ -85,7 +85,6 @@ app.get("/api/functions", async (req, res) => {
     // Parse and send the result
     try {
       const parsedResult = JSON.parse(stdout.replace(/'/g, "\""));
-      console.log(parsedResult);
       res.status(200).json(parsedResult);
     } catch (e) {
       console.error(`Error parsing JSON: ${e}`);

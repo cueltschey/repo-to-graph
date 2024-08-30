@@ -8,7 +8,7 @@ import uuid
 
 def find_files(path):
     """Find all .cc and .h files in the directory."""
-    return set([file for file in path.glob("**/*.cc")] + [file for file in path.glob("**/*.h")])
+    return set([file for file in path.glob("**/*.cc")] + [file for file in path.glob("**/*.h")] + [file for file in path.glob("**/*.cpp")] + [file for file in path.glob("**/*.c")])
 
 def parse_file_imports(file_path, dir):
     """Parse a file to find its import relationships and return a list of pathlib.Path objects."""
@@ -88,11 +88,11 @@ def generate_file_graph(files, dirstring):
         else:
             file_type = "Common"
         current_uuid = str(uuid.uuid4())
-        nodes.append({'id': current_uuid, "user": str(file), 'description': file_type})
+        nodes.append({'id': current_uuid, "name": str(file), 'type': file_type})
     for node in nodes:
-        imports = parse_file_imports(pathlib.Path(node["user"]), dir)
+        imports = parse_file_imports(pathlib.Path(node["name"]), dir)
         for imp in imports:
-            matching_nodes = [item for item in nodes if str(imp) in item["user"]]
+            matching_nodes = [item for item in nodes if str(imp) in item["name"]]
             if len(matching_nodes) > 0:
                 links.append({'source': node["id"], 'target': matching_nodes[0]["id"], 'value': 2})
     
@@ -114,7 +114,7 @@ def generate_function_graph(files):
                 continue
             if  func_name not in name_to_id.keys():
                 current_uuid = str(uuid.uuid4())
-                nodes.append({'id': current_uuid, "user": func_name, 'description': func_desc})
+                nodes.append({'id': current_uuid, "name": func_name, 'type': func_desc})
                 name_to_id[func.split(" ")[-1].split("::")[-1]] = current_uuid
 
     for file in files:
