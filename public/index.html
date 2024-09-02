@@ -56,10 +56,6 @@
     </div>
     <script>
     colorList = {
-      "Common": "#34ff34",
-      "srsRAN eNB": "#bb4444",
-      "srsRAN EPC": "#121255",
-      "srsRAN UE": "#aaaaff"
     }
 
     let focusedNode = null;
@@ -80,7 +76,9 @@
 
     function nodePaint(node, ctx, index) {
       if(!colorList[node.type]){
-        ctx.fillStyle = randomColorHex()
+        newColor = randomColorHex()
+        ctx.fillStyle = newColor
+        colorList[node.type] = newColor
       } else {
         ctx.fillStyle = colorList[node.type]
       }
