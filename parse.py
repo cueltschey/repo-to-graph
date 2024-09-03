@@ -66,7 +66,28 @@ def parse_file_calls(file_path):
     
     return functions
 
+def parse_interface(file_path):
+    declarations = []
+    calls = []
+    completed_calls = []
+    inside_struct = False
+    
+    with open(file_path, 'r') as f:
+        for line in f:
+            if "struct" in line:
+                inside_struct = True
+            if "}" in line:
+                current_struct = line.split(" ")[-1].strip()
+                declarations.append(current_struct)
+                for call in calls:
+                    completed_calls.append({"to": call, "from": current_struct})
+                calls = []
+                inside_struct = False
+            if inside_struct and "std::" not in line:
+                if "bool" not in line and "int" not in line:
+                    calls.append(line.strip().split(" ")[0])
 
+    return declarations, completed_calls
 
 
 
@@ -124,8 +145,31 @@ def generate_function_graph(files):
                 links.append({'source': name_to_id[func["from"]], 'target': name_to_id[func["to"]],'value': 2})
 
 
-    
     return nodes, links
+
+def generate_interface_graph(files):
+    """Generate nodes and links from file import relationships."""
+    nodes = []
+    links = []
+    name_to_id = {}
+    struct_calls = []
+    for file in files:
+        declarations, new_calls = parse_interface(file)
+        struct_calls += new_calls
+        for dec in declarations:
+            if  dec not in name_to_id.keys():
+                current_uuid = str(uuid.uuid4())
+                nodes.append({'id': current_uuid, "name": dec, 'type': "test"})
+                name_to_id[dec] = current_uuid
+
+    for called_iface in struct_calls:
+        if called_iface["to"] in name_to_id.keys() and called_iface["from"] in name_to_id.keys():
+            links.append({'source': name_to_id[called_iface["from"]], 'target': name_to_id[called_iface["to"]],'value': 2})
+
+
+    return nodes, links
+
+
 
 
 
@@ -148,6 +192,9 @@ def main():
         nodes, links = generate_file_graph(files, ".")
     elif args.type == "functions":
         nodes, links = generate_function_graph(files)
+    elif args.type == "interfaces":
+        nodes, links = generate_interface_graph(files)
+
     graph = {'nodes': nodes, 'links': links}
 
     if args.output:
