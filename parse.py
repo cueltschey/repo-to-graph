@@ -154,6 +154,8 @@ def generate_interface_graph(files):
     name_to_id = {}
     struct_calls = []
     for file in files:
+        if ".h" not in str(file):
+            continue
         declarations, new_calls = parse_interface(file)
         struct_calls += new_calls
         for dec in declarations:
@@ -176,7 +178,7 @@ def generate_interface_graph(files):
 def parse():
     parser = argparse.ArgumentParser(description='Generate JSON for file import relationships.')
     parser.add_argument('directory', type=pathlib.Path, help='Directory to scan for .cc and .h files', default=None)
-    parser.add_argument('--output', type=pathlib.Path, help='output file name')
+    parser.add_argument('--output', type=pathlib.Path, help='output file name', default=pathlib.Path("./graph.json"))
     parser.add_argument('--type', type=str, help='output file name')
     return parser.parse_args()
 
@@ -203,8 +205,6 @@ def main():
             json.dump(graph, f, indent=4)
 
         print(f"Graph Written to {args.output}")
-    else:
-        print(graph)
 
     return 0
 

@@ -33,6 +33,26 @@
       cursor: -moz-grabbing;
       cursor: -webkit-grabbing;
     }
+    .spinner {
+      border: 16px solid #f3f3f3; /* Light grey */
+      border-top: 16px solid #3498db; /* Blue */
+      border-radius: 50%;
+      width: 120px;
+      height: 120px;
+      animation: spin 2s linear infinite;
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      margin-top: -60px; /* Half of the height */
+      margin-left: -60px; /* Half of the width */
+      z-index: 200;
+      background-color: white;
+    }
+    
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
   </style>
   </head>
   <body>
@@ -47,16 +67,20 @@
     ></h2>
     <div id="graph">
       <div class="force-graph-container" style="position: relative;">
-        <canvas width="100vw" height="100vh" style="background: rgb(16, 16, 32);"></canvas>
+        <canvas width="100vw" height="100vh" style="background: rgb(16, 16, 32);">
+        </canvas>
       </div>
     </div>
     <div style="position: absolute; top: 10px; left: 400px">
       <input type="text" id="root" placeholder="Files Root">
       <input type="text" id="rootFunctions" placeholder="functions Root">
+      <input type="text" id="rootInterfaces" placeholder="interfaces Root">
+      <div id="loading-spinner" style="display: none;">
+        <div class="spinner"></div>
+      </div>
     </div>
     <script>
-    colorList = {
-    }
+    colorList = {}
 
     let focusedNode = null;
 
@@ -107,6 +131,8 @@
     }
 
     const initGraphFiles = (endpoint) => {
+      const spinner = document.getElementById('loading-spinner');
+    spinner.style.display = 'block';
       fetch(endpoint).then(res => res.json()).then(data => {
         const elem = document.getElementById('graph');
 
@@ -129,6 +155,8 @@
           })
           .graphData(data);
         Graph.d3Force('charge').strength(-500);
+        spinner.style.display = 'none';
+
 
         document.getElementById('searchBar').addEventListener('input', function() {
           const searchTerm = this.value.toLowerCase();
@@ -194,6 +222,16 @@
     changeRootFunctions.addEventListener('keyup', (event) => {
       if (event.key === 'Enter') {
         initGraphFunctions(`./api/functions?directory=${changeRootFunctions.value}`)
+      }
+    });
+
+
+    const changeIface = document.getElementById("rootInterfaces")
+
+
+    changeIface.addEventListener('keyup', (event) => {
+      if (event.key === 'Enter') {
+        initGraphFunctions(`./api/interfaces?directory=${changeIface.value}`)
       }
     });
 

@@ -2,57 +2,52 @@ const express = require('express');
 const path = require('path');
 const { spawn } = require('child_process');
 const { promisify } = require('util');
+const fs = require('fs');
 
 
 const app = express();
 const parseScriptPath = path.join(__dirname, "parse.py");
 const port = 3000;
 
+
+const executePythonScript = (dir, type) => {
+  return new Promise((resolve, reject) => {
+    const pythonProcess = spawn('python3', [parseScriptPath, dir, '--type', type]);
+
+    let result = '';
+
+    // Collect data from stdout
+    pythonProcess.stdout.on('data', (data) => {
+      result += data.toString();
+    });
+
+    // Handle errors from stderr
+    pythonProcess.stderr.on('data', (data) => {
+      console.error(`Python error: ${data}`);
+    });
+
+    // Wait for the process to exit
+    pythonProcess.on('close', async (code) => {
+      if (code !== 0) {
+        return reject(new Error(`Python script exited with code ${code}`));
+      }
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      console.log(result)
+      resolve(result);
+    });
+
+    // Handle errors in case the process is not spawned correctly
+    pythonProcess.on('error', (err) => {
+      reject(err);
+    });
+  });
+};
+
 // Serve static files from the 'public' directory
 app.use(express.static(path.join(__dirname, 'public')));
 
-app.get("/api/files", (req, res) => {
-  const dir = req.query.directory;
-
-  // Validate the 'directory' parameter
-  if (!dir) {
-    return res.status(400).send("Directory parameter is required");
-  }
-
-  // Spawn the Python process
-  const pythonProcess = spawn("python3", [parseScriptPath, dir, "--type", "files"]);
-
-  // Collect data from stdout
-  let result = '';
-  pythonProcess.stdout.on('data', (data) => {
-    result += data.toString();
-  });
-
-  // Handle errors from stderr
-  pythonProcess.stderr.on('data', (data) => {
-    console.error(`Python error: ${data}`);
-  });
-
-  // Handle process exit
-  pythonProcess.on('close', (code) => {
-    if (code !== 0) {
-      return res.status(500).send(`Python script exited with code ${code}`);
-    }
-
-    try {
-      // Parse and send the result
-      const parsedResult = JSON.parse(result.replace(/'/g, "\""));
-      console.log(parsedResult)
-
-      res.status(200).json(parsedResult);
-    } catch (e) {
-      console.error(`Error parsing JSON: ${e}`);
-      res.status(500).send('Failed to parse the Python script output');
-    }
-  });
-});
-
-app.get("/api/functions", async (req, res) => {
+app.get("/api/:type", async (req, res) => {
+  const { type } = req.params;
   const dir = req.query.directory;
 
   // Validate the 'directory' parameter
@@ -61,39 +56,31 @@ app.get("/api/functions", async (req, res) => {
   }
 
   try {
-    // Spawn the Python process and wait for it to finish
-    const { stdout, stderr } = await new Promise((resolve, reject) => {
-      const pythonProcess = spawn("python3", [parseScriptPath, dir, "--type", "functions"]);
+    const stdout = await executePythonScript(dir, type);
+    fs.readFile("./graph.json", 'utf8', (err, data) => {
+      if (err) {
+        console.error('Error reading file:', err);
+        res.status(500).send('Failed to parse the Python script output');
+        return;
+      }
 
-      let result = '';
-      pythonProcess.stdout.on('data', (data) => {
-        result += data.toString();
-      });
+      try {
+        // Parse the JSON data
+        const jsonData = JSON.parse(data);
 
-      pythonProcess.stderr.on('data', (data) => {
-        console.error(`Python error: ${data}`);
-      });
-
-      pythonProcess.on('close', async (code) => {
-        if (code !== 0) {
-          return reject(new Error(`Python script exited with code ${code}`));
-        }
-        resolve({ stdout: result });
-      });
+        res.status(200).json(jsonData);
+        return;
+      } catch (parseError) {
+        console.error('Error parsing JSON:', parseError);
+        res.status(500).send('Failed to parse the Python script output');
+        return;
+      }
     });
 
-    // Parse and send the result
-    try {
-      const parsedResult = JSON.parse(stdout.replace(/'/g, "\""));
-      res.status(200).json(parsedResult);
-    } catch (e) {
-      console.error(`Error parsing JSON: ${e}`);
-      res.status(500).send('Failed to parse the Python script output');
-    }
-
+    //const parsedResult = JSON.parse(stdout.replace(/'/g, "\""));
   } catch (e) {
-    console.error(`Error executing Python script: ${e}`);
-    res.status(500).send(`Failed to execute Python script: ${e.message}`);
+    console.error(`Error parsing JSON: ${e}`);
+    res.status(500).send('Failed to parse the Python script output');
   }
 });
 
