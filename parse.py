@@ -63,29 +63,46 @@ def parse_file_calls(file_path):
                 parts = line.split('(')
                 if len(parts) > 0 and len(func_stack) > 0:
                     functions.append({ "to": parts[0].strip().split(" ")[-1].split("::")[-1].split(".")[-1].split(">")[-1], "from": func_stack[0].strip().split(" ")[-1].split("::")[-1].split(".")[-1].split(">")[-1]})
-    
+
     return functions
 
 def parse_interface(file_path):
     declarations = []
-    calls = []
     completed_calls = []
-    inside_struct = False
-    
+
     with open(file_path, 'r') as f:
+        current_struct = ""
+        current_struct_size = 0
+        inside_struct = False
+        calls = []
         for line in f:
-            if "struct" in line:
+            if "struct" in line and "}" not in line and "*" not in line:
                 inside_struct = True
-            if "}" in line:
-                current_struct = line.split(" ")[-1].strip()
-                declarations.append(current_struct)
+                if "_t" not in line:
+                    continue
+                current_struct = line.replace("struct", "").replace("typedef", '').strip().split(" ")[0]
+            if "}" in line and inside_struct and "//" not in line and "int" not in line and "bool" not in line and "enum" not in line:
+                if not current_struct:
+                    current_struct = line.strip().split(" ")[-1].split("<")[-1].split("::")[-1].split("(")[0].replace('}', '').replace(';','').replace(">", '').replace(",", '').strip()
+                declarations.append({"name": current_struct, "size": current_struct_size})
+                if not current_struct or "while" in current_struct or "if" in current_struct or current_struct == "enum":
+                    continue
                 for call in calls:
                     completed_calls.append({"to": call, "from": current_struct})
                 calls = []
                 inside_struct = False
-            if inside_struct and "std::" not in line:
-                if "bool" not in line and "int" not in line:
-                    calls.append(line.strip().split(" ")[0])
+                current_struct_size = 0
+                current_struct = ""
+            if inside_struct:
+                if "std::" in line or "int" in line or "bool" in line or "float" in line or "struct" in line or "typedef" in line: 
+                    current_struct_size += 1
+                    continue
+                if "_t" in line:
+                    current_iface = line.strip().split(" ")[0].split("<")[-1].split("::")[-1].split("(")[0].replace('}', '').replace(';','').replace(">", '').replace(",", '').strip()
+                    if current_iface == "void" or current_iface == "enum":
+                        current_struct_size += 1
+                        continue
+                    calls.append(line.strip())
 
     return declarations, completed_calls
 
@@ -157,12 +174,13 @@ def generate_interface_graph(files):
         if ".h" not in str(file):
             continue
         declarations, new_calls = parse_interface(file)
+        print(new_calls)
         struct_calls += new_calls
         for dec in declarations:
-            if  dec not in name_to_id.keys():
+            if  dec["name"] not in name_to_id.keys():
                 current_uuid = str(uuid.uuid4())
-                nodes.append({'id': current_uuid, "name": dec, 'type': "test"})
-                name_to_id[dec] = current_uuid
+                nodes.append({'id': current_uuid, "name": dec["name"], 'type': f"size_{dec['size']}"})
+                name_to_id[dec["name"]] = current_uuid
 
     for called_iface in struct_calls:
         if called_iface["to"] in name_to_id.keys() and called_iface["from"] in name_to_id.keys():
